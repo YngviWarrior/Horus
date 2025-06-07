@@ -2,6 +2,7 @@ package main
 
 import (
 	"discord-bot/handlers"
+	"discord-bot/jobs"
 	"fmt"
 	"os"
 	"os/signal"
@@ -27,12 +28,12 @@ func main() {
 		return
 	}
 
-	go handlers.ResetVoiceData(timeAlive)
-
 	dg.AddHandler(handlers.OnBotReady)
 	dg.AddHandler(handlers.OnVoiceUpdate)
 	dg.AddHandler(handlers.OnMessageCreate)
 	dg.Identify.Intents = discordgo.IntentsGuildVoiceStates | discordgo.IntentsGuildMessages | discordgo.IntentsGuilds | discordgo.IntentsMessageContent
+
+	go jobs.ResetVoiceData(timeAlive)
 
 	err = dg.Open()
 	if err != nil {

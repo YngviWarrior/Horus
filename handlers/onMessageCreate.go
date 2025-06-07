@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"discord-bot/database"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,11 +15,16 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	if m.GuildID != "" {
+		database.PointsTotal[m.GuildID][m.Author.ID] += 1
+	}
+
 	if strings.HasPrefix(m.Content, "!help") {
 		helpMessage := "Comandos disponíveis:\n" +
 			"!help - Mostra esta mensagem de ajuda\n" +
 			"!tempo @usuário - Mostra quanto tempo o usuário está em um canal de voz\n" +
-			"!invite - Mostra o link de convite do bot\n"
+			"!invite - Mostra o link de convite do bot\n" +
+			"!rank - Mostra o ranking de usuários com mais atividades na semana\n"
 		s.ChannelMessageSend(m.ChannelID, helpMessage)
 		return
 	}
@@ -32,9 +39,9 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				}
 
 				user := m.Mentions[0]
-				startTime, ok := voiceStart[guild.ID][user.ID]
+				startTime, ok := database.VoiceStart[guild.ID][user.ID]
 				if !ok {
-					if totalTime, exists := voiceTotal[guild.ID][user.ID]; exists {
+					if totalTime, exists := database.VoiceTotal[guild.ID][user.ID]; exists {
 						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está em um canal de voz, mas tem um total de %s horas nesta semana.", user.Username, formatDuration(totalTime)))
 					} else {
 						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está em um canal de voz e não tem tempo registrado nesta semana.", user.Username))
@@ -43,7 +50,7 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				}
 
 				duration := time.Since(startTime)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s está em voz há %s. Total de %s horas nesta semana.", user.DisplayName(), formatDuration(duration), formatDuration(voiceTotal[m.GuildID][user.ID])))
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s está em voz há %s. Total de %s horas nesta semana.", user.DisplayName(), formatDuration(duration), formatDuration(database.VoiceTotal[m.GuildID][user.ID])))
 			}
 		}
 	}
@@ -56,6 +63,54 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		inviteURL := fmt.Sprintf("https://discord.com/oauth2/authorize?client_id=%s&permissions=%d&scope=bot+applications.commands", clientID, permissions)
 		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Adicione o bot em seu servidor usando este link:\n%s", inviteURL))
 	}
+
+	if strings.HasPrefix(m.Content, "!rank") {
+		for _, guild := range s.State.Guilds {
+			if guild.ID == m.GuildID {
+				if len(m.Mentions) > 0 {
+					user := m.Mentions[0]
+					points := database.PointsTotal[guild.ID][user.ID]
+					s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário: %s (%s) - Pontos acumulados: %d", user.Username, user.ID, points))
+					return
+				}
+
+				pointsMap := database.PointsTotal[m.GuildID]
+				var sortedUsers []UserPoints
+
+				for userID, points := range pointsMap {
+					sortedUsers = append(sortedUsers, UserPoints{UserID: userID, Points: points})
+				}
+
+				// Ordena do maior para o menor
+				sort.Slice(sortedUsers, func(i, j int) bool {
+					return sortedUsers[i].Points > sortedUsers[j].Points
+				})
+
+				// Monta o top 10
+				var rankList string = "🏆 **Top 10 Ranking de Pontos**:\n"
+				for i, user := range sortedUsers {
+					if i >= 10 {
+						break
+					}
+
+					discordUser, err := s.User(user.UserID)
+					if err != nil {
+						rankList += fmt.Sprintf("%d. ID %s -> %d pontos\n", i+1, user.UserID, user.Points)
+					} else {
+						rankList += fmt.Sprintf("%d. %s -> %d pontos\n", i+1, discordUser.Username, user.Points)
+					}
+				}
+
+				s.ChannelMessageSend(m.ChannelID, rankList)
+				return
+			}
+		}
+	}
+}
+
+type UserPoints struct {
+	UserID string
+	Points int
 }
 
 func formatDuration(d time.Duration) string {

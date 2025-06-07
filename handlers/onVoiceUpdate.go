@@ -1,32 +1,12 @@
 package handlers
 
 import (
+	"discord-bot/database"
 	"fmt"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
-
-var voiceStart = map[string]map[string]time.Time{}
-var voiceTotal = map[string]map[string]time.Duration{}
-
-func ensureGuildMaps(guildID string) {
-	if voiceStart[guildID] == nil {
-		voiceStart[guildID] = map[string]time.Time{}
-	}
-	if voiceTotal[guildID] == nil {
-		voiceTotal[guildID] = map[string]time.Duration{}
-	}
-}
-
-func ResetVoiceData(timeAlive time.Time) {
-	if time.Since(timeAlive) < 7*24*time.Hour {
-		return
-	}
-
-	voiceStart = map[string]map[string]time.Time{}
-	voiceTotal = map[string]map[string]time.Duration{}
-}
 
 func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 	userID := vs.Member.User.ID
@@ -42,7 +22,7 @@ func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 	}
 
 	if vs.ChannelID != "" {
-		voiceStart[guildID][userID] = time.Now()
+		database.VoiceStart[guildID][userID] = time.Now()
 
 		channel, err := s.State.Channel(vs.ChannelID)
 		if err != nil {
@@ -64,18 +44,18 @@ func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 
 		fmt.Printf("[%s] Usuário %s entrou no canal de voz %s no server %s\n", time.Now(), member.User.DisplayName(), channel.Name, guild.Name)
 	} else {
-		start, ok := voiceStart[guildID][userID]
+		start, ok := database.VoiceStart[guildID][userID]
 		if ok && !start.IsZero() {
 			duration := time.Since(start)
-			voiceTotal[guildID][userID] += duration
+			database.VoiceTotal[guildID][userID] += duration
 
 			fmt.Printf("[%s] Usuário %s saiu. Sessão: %s | Total acumulado no servidor: %s\n",
 				time.Now().Format(time.RFC3339),
 				member.User.Username,
 				duration,
-				voiceTotal[guildID][userID],
+				database.VoiceTotal[guildID][userID],
 			)
-			delete(voiceStart[guildID], userID)
+			delete(database.VoiceStart[guildID], userID)
 		}
 	}
 }
