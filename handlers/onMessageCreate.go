@@ -13,6 +13,15 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	if strings.HasPrefix(m.Content, "!help") {
+		helpMessage := "Comandos disponíveis:\n" +
+			"!help - Mostra esta mensagem de ajuda\n" +
+			"!tempo @usuário - Mostra quanto tempo o usuário está em um canal de voz\n" +
+			"!invite - Mostra o link de convite do bot\n"
+		s.ChannelMessageSend(m.ChannelID, helpMessage)
+		return
+	}
+
 	// Comando "!tempo @usuário"
 	if strings.HasPrefix(m.Content, "!tempo") {
 		if len(m.Mentions) == 0 {
