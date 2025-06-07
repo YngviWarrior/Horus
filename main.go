@@ -6,12 +6,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 )
 
 func main() {
+	timeAlive := time.Now()
+
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Aviso: não foi possível carregar .env (normal no deploy em Railway)")
@@ -23,6 +26,8 @@ func main() {
 		fmt.Println("Erro ao criar sessão:", err)
 		return
 	}
+
+	go handlers.ResetVoiceData(timeAlive)
 
 	dg.AddHandler(handlers.OnBotReady)
 	dg.AddHandler(handlers.OnVoiceUpdate)

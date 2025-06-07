@@ -8,6 +8,16 @@ import (
 )
 
 var voiceStart = map[string]time.Time{}
+var voiceTotal = map[string]time.Duration{}
+
+func ResetVoiceData(timeAlive time.Time) {
+	if time.Since(timeAlive) < 24*time.Hour*7 {
+		return // Não reseta se o bot está ativo há menos de 7 dias
+	}
+
+	voiceStart = make(map[string]time.Time)
+	voiceTotal = make(map[string]time.Duration)
+}
 
 func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 	userID := vs.Member.User.ID
@@ -37,10 +47,16 @@ func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 		fmt.Printf("[%s] Usuário %s entrou no canal de voz %s\n", time.Now(), member.User.DisplayName(), channel.Name)
 	} else {
 		start, ok := voiceStart[userID]
-		if ok {
+		if ok && !start.IsZero() {
 			duration := time.Since(start)
-			fmt.Printf("[%s] Usuário %s saiu. Ficou por: %s\n", time.Now(), member.User.DisplayName(), duration)
-			voiceStart[userID] = time.Time{} // Limpa o tempo de início
+			voiceTotal[userID] += duration // Acumula tempo
+			fmt.Printf("[%s] Usuário %s saiu. Sessão: %s | Total: %s\n",
+				time.Now().Format(time.RFC3339),
+				member.User.Username,
+				duration,
+				voiceTotal[userID],
+			)
+			delete(voiceStart, userID)
 		}
 	}
 }
