@@ -4,6 +4,8 @@ import (
 	"discord-bot/handlers"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -33,7 +35,11 @@ func main() {
 		fmt.Println("Erro ao abrir conexão:", err)
 		return
 	}
+	defer dg.Close()
 
-	fmt.Println("Bot online. Pressione CTRL+C para sair.")
-	select {}
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+
+	fmt.Println("Encerrando bot...")
 }
