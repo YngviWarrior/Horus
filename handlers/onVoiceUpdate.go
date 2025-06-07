@@ -7,16 +7,25 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var voiceStart = map[string]time.Time{}
-var voiceTotal = map[string]time.Duration{}
+var voiceStart = map[string]map[string]time.Time{}
+var voiceTotal = map[string]map[string]time.Duration{}
+
+func ensureGuildMaps(guildID string) {
+	if voiceStart[guildID] == nil {
+		voiceStart[guildID] = map[string]time.Time{}
+	}
+	if voiceTotal[guildID] == nil {
+		voiceTotal[guildID] = map[string]time.Duration{}
+	}
+}
 
 func ResetVoiceData(timeAlive time.Time) {
-	if time.Since(timeAlive) < 24*time.Hour*7 {
-		return // Não reseta se o bot está ativo há menos de 7 dias
+	if time.Since(timeAlive) < 7*24*time.Hour {
+		return
 	}
 
-	voiceStart = make(map[string]time.Time)
-	voiceTotal = make(map[string]time.Duration)
+	voiceStart = map[string]map[string]time.Time{}
+	voiceTotal = map[string]map[string]time.Duration{}
 }
 
 func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
@@ -33,7 +42,7 @@ func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 	}
 
 	if vs.ChannelID != "" {
-		voiceStart[userID] = time.Now()
+		voiceStart[guildID][userID] = time.Now()
 
 		channel, err := s.State.Channel(vs.ChannelID)
 		if err != nil {
@@ -44,19 +53,29 @@ func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 			}
 		}
 
-		fmt.Printf("[%s] Usuário %s entrou no canal de voz %s\n", time.Now(), member.User.DisplayName(), channel.Name)
+		guild, err := s.State.Guild(guildID)
+		if err != nil {
+			guild, err = s.Guild(guildID)
+			if err != nil {
+				fmt.Printf("Erro ao obter o servidor: %v\n", err)
+				return
+			}
+		}
+
+		fmt.Printf("[%s] Usuário %s entrou no canal de voz %s no server %s\n", time.Now(), member.User.DisplayName(), channel.Name, guild.Name)
 	} else {
-		start, ok := voiceStart[userID]
+		start, ok := voiceStart[guildID][userID]
 		if ok && !start.IsZero() {
 			duration := time.Since(start)
-			voiceTotal[userID] += duration // Acumula tempo
-			fmt.Printf("[%s] Usuário %s saiu. Sessão: %s | Total: %s\n",
+			voiceTotal[guildID][userID] += duration
+
+			fmt.Printf("[%s] Usuário %s saiu. Sessão: %s | Total acumulado no servidor: %s\n",
 				time.Now().Format(time.RFC3339),
 				member.User.Username,
 				duration,
-				voiceTotal[userID],
+				voiceTotal[guildID][userID],
 			)
-			delete(voiceStart, userID)
+			delete(voiceStart[guildID], userID)
 		}
 	}
 }

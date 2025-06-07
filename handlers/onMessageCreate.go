@@ -24,20 +24,28 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Comando "!tempo @usuário"
 	if strings.HasPrefix(m.Content, "!tempo") {
-		if len(m.Mentions) == 0 {
-			s.ChannelMessageSend(m.ChannelID, "Por favor, mencione um usuário para verificar o tempo.")
-			return
-		}
+		for _, guild := range s.State.Guilds {
+			if guild.ID == m.GuildID {
+				if len(m.Mentions) == 0 {
+					s.ChannelMessageSend(m.ChannelID, "Por favor, mencione um usuário para verificar o tempo.")
+					return
+				}
 
-		user := m.Mentions[0]
-		startTime, ok := voiceStart[user.ID]
-		if !ok {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está em um canal de voz.", user.Username))
-			return
-		}
+				user := m.Mentions[0]
+				startTime, ok := voiceStart[guild.ID][user.ID]
+				if !ok {
+					if totalTime, exists := voiceTotal[guild.ID][user.ID]; exists {
+						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está em um canal de voz, mas tem um total de %s horas nesta semana.", user.Username, formatDuration(totalTime)))
+					} else {
+						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está em um canal de voz e não tem tempo registrado nesta semana.", user.Username))
+					}
+					return
+				}
 
-		duration := time.Since(startTime)
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s está em voz há %s.", user.DisplayName(), formatDuration(duration)))
+				duration := time.Since(startTime)
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s está em voz há %s. Total de %s horas nesta semana.", user.DisplayName(), formatDuration(duration), formatDuration(voiceTotal[m.GuildID][user.ID])))
+			}
+		}
 	}
 
 	// Comando "!invite"

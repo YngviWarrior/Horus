@@ -23,16 +23,18 @@ func OnBotReady(s *discordgo.Session, m *discordgo.Ready) {
 			continue
 		}
 
+		ensureGuildMaps(guild.ID)
+
 		for _, server := range channels {
 			if server.Type == discordgo.ChannelTypeGuildVoice {
 				for _, vs := range guild.VoiceStates {
 					if vs.ChannelID == server.ID {
-						voiceStart[vs.UserID] = time.Now()
+						voiceStart[guild.ID][vs.UserID] = time.Now()
 						user, err := s.User(vs.UserID)
 						if err == nil {
-							fmt.Printf("Usuário %s (%s) já está no canal de voz %s\n", user.Username, user.ID, server.Name)
+							fmt.Printf("Usuário %s (%s) já está no canal de voz %s no server %s\n", user.Username, user.ID, server.Name, guild.Name)
 						} else {
-							fmt.Printf("Usuário %s já está no canal de voz %s\n", vs.UserID, server.Name)
+							fmt.Printf("Usuário %s já está no canal de voz %s no server %s\n", vs.UserID, server.Name, guild.Name)
 						}
 					}
 				}
