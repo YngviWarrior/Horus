@@ -97,7 +97,7 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 					if err != nil {
 						rankList += fmt.Sprintf("%d. ID %s -> %d pontos\n", i+1, user.UserID, user.Points)
 					} else {
-						rankList += fmt.Sprintf("%d. %s -> %d pontos\n", i+1, discordUser.Username, user.Points)
+						rankList += fmt.Sprintf("%d. %s -> %d pontos\n", i+1, discordUser.DisplayName(), user.Points)
 					}
 				}
 
