@@ -12,10 +12,9 @@ import (
 )
 
 func main() {
-	// Carrega o .env
 	err := godotenv.Load()
 	if err != nil {
-		panic("Erro ao carregar .env")
+		fmt.Println("Aviso: não foi possível carregar .env (normal no deploy em Railway)")
 	}
 
 	token := os.Getenv("DISCORD_BOT_TOKEN")
