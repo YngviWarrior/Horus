@@ -42,15 +42,15 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				startTime, ok := database.VoiceStart[guild.ID][user.ID]
 				if !ok {
 					if totalTime, exists := database.VoiceTotal[guild.ID][user.ID]; exists {
-						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está em um canal de voz, mas tem um total de %s horas nesta semana.", user.Username, formatDuration(totalTime)))
+						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está ativo em um canal de voz, mas tem um total de %s horas nesta semana.", user.DisplayName(), formatDuration(totalTime)))
 					} else {
-						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está em um canal de voz e não tem tempo registrado nesta semana.", user.Username))
+						s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s não está ativo em um canal de voz e não tem tempo registrado nesta semana.", user.DisplayName()))
 					}
 					return
 				}
 
 				duration := time.Since(startTime)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s está em voz há %s. Total de %s horas nesta semana.", user.DisplayName(), formatDuration(duration), formatDuration(database.VoiceTotal[m.GuildID][user.ID])))
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Usuário %s está ativo em voz há %s. Total de %s horas nesta semana.", user.DisplayName(), formatDuration(duration), formatDuration(database.VoiceTotal[m.GuildID][user.ID])))
 			}
 		}
 	}

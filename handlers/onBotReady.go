@@ -36,6 +36,11 @@ func OnBotReady(s *discordgo.Session, m *discordgo.Ready) {
 			if server.Type == discordgo.ChannelTypeGuildVoice {
 				for _, vs := range guild.VoiceStates {
 					if vs.ChannelID == server.ID {
+						if vs.SelfMute || vs.SelfDeaf || vs.Mute || vs.Deaf {
+							fmt.Printf("Usuário %s está mutado ou deafen. Ignorando para pontuação.\n", vs.UserID)
+							continue
+						}
+
 						database.VoiceStart[guild.ID][vs.UserID] = time.Now()
 						user, err := s.User(vs.UserID)
 						if err == nil {

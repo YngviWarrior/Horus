@@ -21,7 +21,21 @@ func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 		}
 	}
 
-	if vs.ChannelID != "" {
+	if vs.SelfDeaf || vs.SelfMute || vs.Mute || vs.Deaf {
+		start, ok := database.VoiceStart[guildID][userID]
+		if ok && !start.IsZero() {
+			duration := time.Since(start)
+			database.VoiceTotal[guildID][userID] += duration
+
+			fmt.Printf("[%s] Usuário %s Mutou. Sessão: %s | Total acumulado no servidor: %s\n",
+				time.Now().Format(time.RFC3339),
+				member.User.Username,
+				duration,
+				database.VoiceTotal[guildID][userID],
+			)
+			delete(database.VoiceStart[guildID], userID)
+		}
+	} else if vs.ChannelID != "" {
 		database.VoiceStart[guildID][userID] = time.Now()
 
 		channel, err := s.State.Channel(vs.ChannelID)
@@ -58,4 +72,5 @@ func OnVoiceUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 			delete(database.VoiceStart[guildID], userID)
 		}
 	}
+
 }
