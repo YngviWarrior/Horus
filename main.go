@@ -33,7 +33,7 @@ func main() {
 	dg.AddHandler(handlers.OnMessageCreate)
 	dg.Identify.Intents = discordgo.IntentsGuildVoiceStates | discordgo.IntentsGuildMessages | discordgo.IntentsGuilds | discordgo.IntentsMessageContent
 
-	go jobs.ResetVoiceData(timeAlive)
+	go jobs.ResetData(dg, timeAlive)
 
 	err = dg.Open()
 	if err != nil {

@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"discord-bot/database"
+	"discord-bot/utility"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -75,16 +75,7 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				}
 
 				pointsMap := database.PointsTotal[m.GuildID]
-				var sortedUsers []UserPoints
-
-				for userID, points := range pointsMap {
-					sortedUsers = append(sortedUsers, UserPoints{UserID: userID, Points: points})
-				}
-
-				// Ordena do maior para o menor
-				sort.Slice(sortedUsers, func(i, j int) bool {
-					return sortedUsers[i].Points > sortedUsers[j].Points
-				})
+				sortedUsers := utility.SortTotalPoints(pointsMap)
 
 				// Monta o top 10
 				var rankList string = "🏆 **Top 10 Ranking de Pontos**:\n"
@@ -106,11 +97,6 @@ func OnMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 		}
 	}
-}
-
-type UserPoints struct {
-	UserID string
-	Points int
 }
 
 func formatDuration(d time.Duration) string {
